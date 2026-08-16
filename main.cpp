@@ -5,11 +5,12 @@ using namespace std;
 typedef unsigned char BYTE; //char is 1 byte, unsigned cuz 0-255
 typedef unsigned short int WORD; // short int is 2 bytes, 0-65535
 
-BYTE m_Game_Memory[0xFFF];
+BYTE m_GameMemory[0xFFF];
 BYTE m_Registers[16];
 WORD m_AddressI;
 WORD m_ProgramCounter;
 vector m_stack;
+BYTE m_screen[64][32];
 
 void CPU_Reset(){
 	
@@ -23,3 +24,40 @@ void CPU_Reset(){
 	fclose(in);
 	}
 
+WORD next_opcode(){
+
+WORD res = m_GameMemory[m_ProgramCounter];
+res = res<<8;
+res=res|m_GameMemory[m_ProgramCounter+1];
+m_ProgramCounter+=2;
+return res;
+
+}
+void Opcode1NNN(WORD opcode){
+m_ProgramCounter = opcode & 0x0FFF;
+
+}
+void Opcode00E0(WORD opcode){
+m_ProgramCounter = opcode & 0x00F0;
+
+}
+void Opcode00EE(WORD opcode){
+m_ProgramCounter = opcode & 0x00FF;
+
+}
+
+WORD opcode = next_opcode();
+
+switch(opcode & 0xF000){
+	case 0x1000: Opcode1NNN(opcode); break;
+	case 0x0000:{
+		    switch(opcode & 0x000F){
+		    	case 0x0000: Opcode00E0(opcode); break;
+			case 0x000E: Opcode00EE(opcode); break; 
+		    
+		    }
+		    
+		    }break;
+	default: break;
+
+}
