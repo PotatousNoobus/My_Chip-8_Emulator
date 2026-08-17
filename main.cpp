@@ -37,12 +37,99 @@ void Opcode1NNN(WORD opcode){
 m_ProgramCounter = opcode & 0x0FFF;
 
 }
-void Opcode00E0(WORD opcode){
-m_ProgramCounter = opcode & 0x00F0;
+void Opcode2NNN(WORD opcode){
+m_stack.push_back(m_ProgramCounter);
+m_ProgramCounter = opcode & 0x0FFF;
 
 }
+/*void Opcode00E0(WORD opcode){
+m_ProgramCounter = opcode & 0x00F0;
+
+}*/
 void Opcode00EE(WORD opcode){
-m_ProgramCounter = opcode & 0x00FF;
+m_ProgramCounter = m_stack.back();
+m_stack.pop_back();
+
+}
+void Opcode5XY0(WORD opcode){
+int reg_x = opcode & 0x0F00;
+int reg_y = opcode & 0x00F0;
+reg_x = reg_x >> 8;
+reg_y = reg_y >> 4;
+if(m_Registers[reg_x]==m_Registers[reg_y]) m_ProgramCounter+=2;
+}
+
+void Opcode8XYN(WORD opcode){
+
+m_Register[0xF]=1; //carry flag =1
+int reg_x = opcode & 0x0F00;
+int reg_y = opcode & 0x00F0;
+reg_x = reg_x >> 8;
+reg_y = reg_y >> 4;
+int x = m_Registers[reg_x];
+int y = m_Registers[reg_y];
+
+if(x<y) m_Registers[0xF] = 0;
+else{
+m_Registers[reg_x] = x-y;
+}
+}
+
+void OpcodeDXYN( WORD opcode )
+{
+     int regx = opcode & 0x0F00 ;
+     regx = regx >> 8 ;
+     int regy = opcode & 0x00F0 ;
+     regy = regy >> 4 ;
+
+     int height = opcode & 0x000F
+     int coordx = m_Registers[regx] ;
+     int coordy = m_Registers[regy] ;
+
+     m_Registers[0xf] = 0 ;
+
+     // loop for the amount of vertical lines needed to draw
+     for (int yline = 0; yline < height; yline++)
+     {
+          BYTE data = m_GameMemory[m_AddressI+yline];
+          int xpixelinv = 7 ;
+          int xpixel = 0 ;
+          for(xpixel = 0;xpixel < 8; xpixel++,xpixelinv--)
+          {
+               int mask = 1 << xpixelinv ;
+               if (data & mask)
+               {
+                    int x = coordx + xpixel;
+                    int y = coordy + yline ;
+                    if ( m_ScreenData[x][y] == 1 )
+                         m_Registers[0xF]=1; //collision
+                    m_ScreenData[x][y]^=1 ;
+               }
+          }
+     }
+}
+
+void OpcodeFX33(WORD opcode){
+int reg_x = opcode & 0x0F00;
+reg_x = reg_x>>8;
+int val = m_Registers[reg_x];
+int hundred = val / 100;
+int tens = (val/10)%10;
+int units = val%10;
+m_GameMemory[m_AddressI] =hundred; 
+m_GameMemory[m_AddressI+1] =tens;
+m_GameMemory[m_AddressI+2] =units;
+
+}
+
+void OpcodeFX55(WORD opcode){
+int reg_x = opcode & 0x0F00;
+reg_x>>=8;
+for(int i=0; i<=reg_x; i++){
+	m_GameMemory[m_AddressI+i] = m_Registers[i]; 
+
+}
+m_AddressI = m_AddressI+reg_x+1;
 
 }
 
