@@ -9,7 +9,7 @@ BYTE m_GameMemory[0xFFF];
 BYTE m_Registers[16];
 WORD m_AddressI;
 WORD m_ProgramCounter;
-vector m_stack;
+vector <WORD> m_stack;
 BYTE m_screen[64][32];
 
 void CPU_Reset(){
@@ -20,7 +20,7 @@ void CPU_Reset(){
 
 	FILE *in;
 	in = fopen("d:/Own_Projects/CHIP-8_Emulator/INVADERS", "rb");
-	fread(&m_Game_Memory[0x200], 0xfff, 1, in);
+	fread(&m_GameMemory[0x200], 0xfff, 1, in);
 	fclose(in);
 	}
 
@@ -61,7 +61,7 @@ if(m_Registers[reg_x]==m_Registers[reg_y]) m_ProgramCounter+=2;
 
 void Opcode8XYN(WORD opcode){
 
-m_Register[0xF]=1; //carry flag =1
+m_Registers[0xF]=1; //carry flag =1
 int reg_x = opcode & 0x0F00;
 int reg_y = opcode & 0x00F0;
 reg_x = reg_x >> 8;
@@ -133,6 +133,7 @@ m_AddressI = m_AddressI+reg_x+1;
 
 }
 
+void EmulateCycle(){
 WORD opcode = next_opcode();
 
 switch(opcode & 0xF000){
@@ -147,4 +148,15 @@ switch(opcode & 0xF000){
 		    }break;
 	default: break;
 
+}
+}
+
+void DrawTerminalASCII() {
+    std::cout << "\033[H"; // Reset console cursor to top left
+    for (int y = 0; y < 32; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            std::cout << (m_screen[x][y] ? "█" : " ");
+        }
+        std::cout << "\n";
+    }
 }
