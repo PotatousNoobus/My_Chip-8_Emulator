@@ -1,16 +1,19 @@
 #include <iostream>
+#include <bits/stdc++.h>
+#include <thread>
+#include <chrono>
 
 using namespace std;
 
 typedef unsigned char BYTE; //char is 1 byte, unsigned cuz 0-255
 typedef unsigned short int WORD; // short int is 2 bytes, 0-65535
 
-BYTE m_GameMemory[0xFFF];
+BYTE m_GameMemory[0x1000];
 BYTE m_Registers[16];
 WORD m_AddressI;
 WORD m_ProgramCounter;
 vector <WORD> m_stack;
-BYTE m_screen[64][32];
+BYTE m_ScreenData[64][32];
 
 void CPU_Reset(){
 	
@@ -20,7 +23,7 @@ void CPU_Reset(){
 
 	FILE *in;
 	in = fopen("d:/Own_Projects/CHIP-8_Emulator/INVADERS", "rb");
-	fread(&m_GameMemory[0x200], 0xfff, 1, in);
+	fread(&m_GameMemory[0x200], 0x1000, 1, in);
 	fclose(in);
 	}
 
@@ -42,10 +45,9 @@ m_stack.push_back(m_ProgramCounter);
 m_ProgramCounter = opcode & 0x0FFF;
 
 }
-/*void Opcode00E0(WORD opcode){
-m_ProgramCounter = opcode & 0x00F0;
-
-}*/
+void Opcode00E0(WORD opcode){
+	memset(m_ScreenData, 0, sizeof(m_ScreenData));
+}
 void Opcode00EE(WORD opcode){
 m_ProgramCounter = m_stack.back();
 m_stack.pop_back();
@@ -73,6 +75,7 @@ if(x<y) m_Registers[0xF] = 0;
 else{
 m_Registers[reg_x] = x-y;
 }
+
 }
 
 void OpcodeDXYN( WORD opcode )
@@ -82,7 +85,7 @@ void OpcodeDXYN( WORD opcode )
      int regy = opcode & 0x00F0 ;
      regy = regy >> 4 ;
 
-     int height = opcode & 0x000F
+     int height = opcode & 0x000F;
      int coordx = m_Registers[regx] ;
      int coordy = m_Registers[regy] ;
 
@@ -99,8 +102,8 @@ void OpcodeDXYN( WORD opcode )
                int mask = 1 << xpixelinv ;
                if (data & mask)
                {
-                    int x = coordx + xpixel;
-                    int y = coordy + yline ;
+                    int x = (coordx + xpixel)%64;
+                    int y = (coordy + yline)%32 ;
                     if ( m_ScreenData[x][y] == 1 )
                          m_Registers[0xF]=1; //collision
                     m_ScreenData[x][y]^=1 ;
@@ -138,14 +141,30 @@ WORD opcode = next_opcode();
 
 switch(opcode & 0xF000){
 	case 0x1000: Opcode1NNN(opcode); break;
+
 	case 0x0000:{
 		    switch(opcode & 0x000F){
 		    	case 0x0000: Opcode00E0(opcode); break;
-			case 0x000E: Opcode00EE(opcode); break; 
+			    case 0x000E: Opcode00EE(opcode); break;
 		    
 		    }
 		    
 		    }break;
+
+	case 0x2000: Opcode2NNN(opcode); break;
+	case 0x5000: Opcode5XY0(opcode); break;
+	case 0x8000: Opcode8XYN(opcode); break;
+	case 0xD000: OpcodeDXYN(opcode); break;
+	case 0xF000: {
+		// There are many 'F' opcodes. We isolate the last two digits to know which one.
+		switch(opcode & 0x00FF) {
+			case 0x0033: OpcodeFX33(opcode); break;
+			case 0x0055: OpcodeFX55(opcode); break;
+			default: break; 
+		}
+	} break;
+
+
 	default: break;
 
 }
@@ -155,8 +174,20 @@ void DrawTerminalASCII() {
     std::cout << "\033[H"; // Reset console cursor to top left
     for (int y = 0; y < 32; ++y) {
         for (int x = 0; x < 64; ++x) {
-            std::cout << (m_screen[x][y] ? "█" : " ");
+            std::cout << (m_ScreenData[x][y] ? "█" : " ");
         }
         std::cout << "\n";
     }
+}
+
+int main() {
+	CPU_Reset();
+	std::cout << "\033[2J";
+	while (true) {
+		EmulateCycle();
+		std::this_thread::sleep_for(std::chrono::milliseconds(2));
+	}
+
+
+	return 0;
 }
